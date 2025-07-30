@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
-import { RegisterBodyType, VerificationCodeType } from 'src/routes/auth/entities/auth.entity'
+import { DeviceType, RegisterBodyType, RoleType, VerificationCodeType } from 'src/routes/auth/entities/auth.entity'
+import { TypeOfVerificationCode } from 'src/shared/constants/auth.constant'
 import { RoleName } from 'src/shared/constants/role.constant'
 import { UserType } from 'src/shared/models/shared-user.model'
 import { PrismaService } from 'src/shared/services/prisma.service'
@@ -10,7 +11,7 @@ export class AuthRepository {
 
   // khong quy dinh kieu tra ve cung duoc vi prisma da quy dinh san roi, nhung sau nay neu co thay doi ORM thi van phai tra ve kieu da quy dinh (vi ORM moi co the tra ve kieu khac voi hien tai)
   createUser(
-    user: Omit<RegisterBodyType, 'confirmPassword'> & Pick<UserType, 'roleId'>
+    user: Omit<RegisterBodyType, 'code' | 'confirmPassword'> & Pick<UserType, 'roleId'>
   ): Promise<Omit<UserType, 'password' | 'totpSecret'>> {
     return this.prismaService.user.create({
       data: user,
@@ -40,6 +41,39 @@ export class AuthRepository {
       update: {
         code: payload.code,
         expiresAt: payload.expiresAt
+      }
+    })
+  }
+
+  findUniqueVerificationCode(
+    uniqueObject: { email: string } | { id: number } | { email: string; type: TypeOfVerificationCode; code: string }
+  ): Promise<VerificationCodeType | null> {
+    return this.prismaService.verificationCode.findUnique({
+      where: uniqueObject
+    })
+  }
+
+  createRefreshToken(data: { token: string; userId: number; deviceId: number; expiresAt: Date }) {
+    return this.prismaService.refreshToken.create({
+      data
+    })
+  }
+
+  createDevice(
+    data: Pick<DeviceType, 'userId' | 'userAgent' | 'ip'> & Partial<Pick<DeviceType, 'lastActive' | 'isActive'>>
+  ) {
+    return this.prismaService.device.create({
+      data
+    })
+  }
+
+  findUniqueUserIncludeRole(
+    uniqueObject: { email: string } | { id: number }
+  ): Promise<(UserType & { role: RoleType }) | null> {
+    return this.prismaService.user.findUnique({
+      where: uniqueObject,
+      include: {
+        role: true
       }
     })
   }
