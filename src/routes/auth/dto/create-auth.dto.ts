@@ -1,5 +1,15 @@
 import { createZodDto } from 'nestjs-zod'
-import { RegisterBodySchema, RegisterResSchema, SendOtpBodySchema } from 'src/routes/auth/entities/auth.entity'
+import {
+  LoginBodySchema,
+  LoginResSchema,
+  LogoutBodySchema,
+  RefreshTokenBodySchema,
+  RefreshTokenResSchema,
+  RegisterBodySchema,
+  RegisterResSchema,
+  SendOtpBodySchema,
+  SendOtpResSchema
+} from 'src/routes/auth/entities/auth.entity'
 
 // const RegisterBodySchema = z
 //   .object({
@@ -23,6 +33,26 @@ import { RegisterBodySchema, RegisterResSchema, SendOtpBodySchema } from 'src/ro
 
 class RegisterBodyDto extends createZodDto(RegisterBodySchema) {}
 class RegisterResDto extends createZodDto(RegisterResSchema) {}
-class SendOtpBodyDto extends createZodDto(SendOtpBodySchema) {}
 
-export { RegisterBodyDto, RegisterResDto, SendOtpBodyDto }
+class SendOtpBodyDto extends createZodDto(SendOtpBodySchema) {}
+class SendOtpResDto extends createZodDto(SendOtpResSchema) {}
+
+class LoginBodyDto extends createZodDto(LoginBodySchema) {}
+class LoginResDto extends createZodDto(LoginResSchema) {}
+
+class RefreshTokenBodyDto extends createZodDto(RefreshTokenBodySchema) {}
+class RefreshTokenResDto extends createZodDto(RefreshTokenResSchema) {}
+
+class LogoutBodyDto extends createZodDto(LogoutBodySchema) {}
+
+export {
+  RegisterBodyDto,
+  RegisterResDto,
+  SendOtpBodyDto,
+  SendOtpResDto,
+  LoginBodyDto,
+  LoginResDto,
+  RefreshTokenBodyDto,
+  RefreshTokenResDto,
+  LogoutBodyDto
+}
