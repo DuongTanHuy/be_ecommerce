@@ -26,7 +26,7 @@ export class AuthenticationGuard implements CanActivate {
       context.getHandler(),
       context.getClass()
     ]) ?? {
-      authType: [AuthType.None],
+      authType: [AuthType.Bearer],
       option: {
         condition: ConditionGuard.And
       }
