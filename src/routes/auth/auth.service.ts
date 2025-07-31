@@ -1,8 +1,13 @@
 import ms, { StringValue } from 'ms'
-import { Injectable, UnprocessableEntityException } from '@nestjs/common'
+import { Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common'
 import { RolesService } from 'src/routes/auth/roles.service'
 import { SharedService } from 'src/shared/services/shared.service'
-import { LoginBodyType, RegisterBodyType, SendOtpBodyType } from 'src/routes/auth/entities/auth.entity'
+import {
+  LoginBodyType,
+  RefreshTokenBodyType,
+  RegisterBodyType,
+  SendOtpBodyType
+} from 'src/routes/auth/entities/auth.entity'
 import { AuthRepository } from 'src/routes/auth/auth.repo'
 import { SharedUserRepository } from 'src/shared/repositories/shared-user.repo'
 import { generateOtp } from 'src/shared/helpers'
@@ -152,7 +157,7 @@ export class AuthService {
     }
 
     const code = generateOtp()
-    const verificationCode = this.authRepository.createVerificationCode({
+    await this.authRepository.createVerificationCode({
       email,
       code,
       type,
@@ -173,6 +178,82 @@ export class AuthService {
       ])
     }
 
-    return verificationCode
+    return {
+      message: 'Send OTP code successful'
+    }
+  }
+
+  async refreshToken({
+    token,
+    userAgent,
+    ip
+  }: RefreshTokenBodyType & {
+    userAgent: string
+    ip: string
+  }) {
+    const { userId } = await this.tokenService.verifyRefreshToken(token)
+
+    if (!userId) {
+      throw new UnprocessableEntityException([
+        {
+          message: 'Refresh token is invalid',
+          path: 'refreshToken'
+        }
+      ])
+    }
+
+    const refreshTokenData = await this.authRepository.findUniqueRefreshTokenIncludeUserRole({ token })
+
+    if (!refreshTokenData) {
+      throw new UnauthorizedException('Refresh token is lost')
+    }
+
+    const {
+      deviceId,
+      user: {
+        roleId,
+        role: { name: roleName }
+      }
+    } = refreshTokenData
+
+    const $updateDevice = this.authRepository.updateDevice(deviceId, {
+      userAgent,
+      ip
+    })
+
+    const $deleteOldToken = this.authRepository.deleteRefreshToken({ token })
+
+    const $generateTokens = this.generateToken({
+      userId,
+      deviceId,
+      roleId,
+      roleName
+    })
+    const [, , tokens] = await Promise.all([$updateDevice, $deleteOldToken, $generateTokens])
+
+    return tokens
+  }
+
+  async logout(token: string) {
+    const { userId } = await this.tokenService.verifyRefreshToken(token)
+
+    if (!userId) {
+      throw new UnprocessableEntityException([
+        {
+          message: 'Refresh token is invalid',
+          path: 'refreshToken'
+        }
+      ])
+    }
+
+    const { deviceId } = await this.authRepository.deleteRefreshToken({ token })
+
+    await this.authRepository.updateDevice(deviceId, {
+      isActive: false
+    })
+
+    return {
+      message: 'Logout successful'
+    }
   }
 }
