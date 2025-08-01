@@ -1,8 +1,9 @@
 import ms, { StringValue } from 'ms'
-import { Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common'
+import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { RolesService } from 'src/routes/auth/roles.service'
 import { SharedService } from 'src/shared/services/shared.service'
 import {
+  ForgotPasswordBodyType,
   LoginBodyType,
   RefreshTokenBodyType,
   RegisterBodyType,
@@ -13,10 +14,19 @@ import { SharedUserRepository } from 'src/shared/repositories/shared-user.repo'
 import { generateOtp } from 'src/shared/helpers'
 import { addMilliseconds } from 'date-fns'
 import envConfig from 'src/shared/config'
-import { VerificationCode } from 'src/shared/constants/auth.constant'
+import { TypeOfVerificationCode, VerificationCode } from 'src/shared/constants/auth.constant'
 import { EmailService } from 'src/shared/services/email.service'
 import { TokenService } from 'src/shared/services/token.service'
 import { AccessTokenPayloadCreate } from 'src/shared/types/jwt.type'
+import {
+  InvalidOTPException,
+  OptCodeInvalid,
+  PasswordIncorrect,
+  RefreshTokenInvalid,
+  SendOtpFailed,
+  UserIsExist,
+  UserNotFound
+} from 'src/routes/auth/error.model'
 
 @Injectable()
 export class AuthService {
@@ -28,6 +38,24 @@ export class AuthService {
     private readonly authRepository: AuthRepository,
     private readonly sharedUserRepository: SharedUserRepository
   ) {}
+
+  async validateVerificationCode({ email, code, type }: { email: string; code: string; type: TypeOfVerificationCode }) {
+    const verificationCode = await this.authRepository.findUniqueVerificationCode({
+      email,
+      code,
+      type
+    })
+
+    if (!verificationCode) {
+      throw OptCodeInvalid
+    }
+
+    if (verificationCode.expiresAt < new Date()) {
+      throw InvalidOTPException
+    }
+
+    return verificationCode
+  }
 
   async generateToken({ userId, deviceId, roleId, roleName }: AccessTokenPayloadCreate) {
     const [accessToken, refreshToken] = await Promise.all([
@@ -66,23 +94,13 @@ export class AuthService {
     const user = await this.authRepository.findUniqueUserIncludeRole({ email: loginBodyDto.email })
 
     if (!user) {
-      throw new UnprocessableEntityException([
-        {
-          message: 'User not found',
-          path: 'email'
-        }
-      ])
+      throw UserNotFound
     }
 
     const isPasswordMath = await this.sharedService.compare(loginBodyDto.password, user.password)
 
     if (!isPasswordMath) {
-      throw new UnprocessableEntityException([
-        {
-          message: 'Password is incorrect',
-          path: 'password'
-        }
-      ])
+      throw PasswordIncorrect
     }
 
     const device = await this.authRepository.createDevice({
@@ -104,40 +122,28 @@ export class AuthService {
   async register(createAuthDto: RegisterBodyType) {
     const { email, password, name, phoneNumber, code } = createAuthDto
 
-    const verificationCode = await this.authRepository.findUniqueVerificationCode({
-      email,
-      code,
-      type: VerificationCode.REGISTER
-    })
+    const $verificationCode = this.validateVerificationCode({ email, code, type: VerificationCode.REGISTER })
 
-    if (!verificationCode) {
-      throw new UnprocessableEntityException([
-        {
-          message: 'Otp code is invalid',
-          path: 'code'
-        }
-      ])
-    }
+    const $getClientRole = this.rolesService.getClientRoleId()
+    const $hashedPassword = this.sharedService.hash(password)
 
-    if (verificationCode.expiresAt < new Date()) {
-      throw new UnprocessableEntityException([
-        {
-          message: 'Otp code is expired',
-          path: 'code'
-        }
-      ])
-    }
+    const [roleId, hashedPassword] = await Promise.all([$getClientRole, $hashedPassword, $verificationCode])
 
-    const roleId = await this.rolesService.getClientRoleId()
-    const hashedPassword = await this.sharedService.hash(password)
-
-    const newUser = await this.authRepository.createUser({
+    const $createUser = this.authRepository.createUser({
       email,
       name,
       password: hashedPassword,
       phoneNumber,
       roleId
     })
+
+    const $deleteVerificationCode = this.authRepository.deleteVerificationCode({
+      email,
+      code,
+      type: VerificationCode.REGISTER
+    })
+
+    const [newUser] = await Promise.all([$createUser, $deleteVerificationCode])
 
     return newUser
   }
@@ -146,13 +152,12 @@ export class AuthService {
     const { email, type } = sendOtpBodyDto
     const isUserExist = await this.sharedUserRepository.findUnique({ email })
 
-    if (isUserExist) {
-      throw new UnprocessableEntityException([
-        {
-          message: 'Email already exist',
-          path: 'email'
-        }
-      ])
+    if (type === VerificationCode.REGISTER && isUserExist) {
+      throw UserIsExist
+    }
+
+    if (type === VerificationCode.FORGOT_PASSWORD && !isUserExist) {
+      throw UserNotFound
     }
 
     const code = generateOtp()
@@ -169,12 +174,7 @@ export class AuthService {
     })
 
     if (error) {
-      throw new UnprocessableEntityException([
-        {
-          message: 'Send verification otp code failure',
-          path: 'code'
-        }
-      ])
+      throw SendOtpFailed
     }
 
     return {
@@ -193,12 +193,7 @@ export class AuthService {
     const { userId } = await this.tokenService.verifyRefreshToken(token)
 
     if (!userId) {
-      throw new UnprocessableEntityException([
-        {
-          message: 'Refresh token is invalid',
-          path: 'refreshToken'
-        }
-      ])
+      throw RefreshTokenInvalid
     }
 
     const refreshTokenData = await this.authRepository.findUniqueRefreshTokenIncludeUserRole({ token })
@@ -237,12 +232,7 @@ export class AuthService {
     const { userId } = await this.tokenService.verifyRefreshToken(token)
 
     if (!userId) {
-      throw new UnprocessableEntityException([
-        {
-          message: 'Refresh token is invalid',
-          path: 'refreshToken'
-        }
-      ])
+      throw RefreshTokenInvalid
     }
 
     const { deviceId } = await this.authRepository.deleteRefreshToken({ token })
@@ -253,6 +243,44 @@ export class AuthService {
 
     return {
       message: 'Logout successful'
+    }
+  }
+
+  async forgotPassword(forgotPasswordBodyDto: ForgotPasswordBodyType) {
+    const { email, code, newPassword } = forgotPasswordBodyDto
+
+    const isUserExist = await this.sharedUserRepository.findUnique({ email })
+
+    if (!isUserExist) {
+      throw UserNotFound
+    }
+
+    const $validateVerificationCode = this.validateVerificationCode({
+      email,
+      code,
+      type: VerificationCode.FORGOT_PASSWORD
+    })
+
+    const $hashedPassword = this.sharedService.hash(newPassword)
+
+    const [hashedPassword] = await Promise.all([$hashedPassword, $validateVerificationCode])
+
+    const $updateUser = this.authRepository.updateUser(
+      { id: isUserExist.id },
+      {
+        password: hashedPassword
+      }
+    )
+    const $deleteVerificationCode = this.authRepository.deleteVerificationCode({
+      email,
+      code,
+      type: VerificationCode.FORGOT_PASSWORD
+    })
+
+    await Promise.all([$updateUser, $deleteVerificationCode])
+
+    return {
+      message: 'Change password successful'
     }
   }
 }
