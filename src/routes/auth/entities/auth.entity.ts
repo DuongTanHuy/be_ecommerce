@@ -47,7 +47,12 @@ const SendOtpResSchema = VerificationCodeSchema
 const LoginBodySchema = UserSchema.pick({
   email: true,
   password: true
-}).strict()
+})
+  .extend({
+    totpCode: z.string().length(6).optional(),
+    code: z.string().length(6).optional()
+  })
+  .strict()
 
 const LoginResSchema = z.object({
   accessToken: z.string(),
@@ -134,6 +139,33 @@ const ForgotPasswordBodySchema = z
     }
   })
 
+const DisableTwoFactorBodySchema = z
+  .object({
+    totpCode: z.string().length(6).optional(),
+    code: z.string().length(6).optional()
+  })
+  .strict()
+  .superRefine(({ totpCode, code }, ctx) => {
+    if ((totpCode !== undefined) === (code !== undefined)) {
+      const message = 'Only one of totpCode or code should be provided'
+      ctx.addIssue({
+        code: 'custom',
+        message,
+        path: ['totpCode']
+      })
+      ctx.addIssue({
+        code: 'custom',
+        message,
+        path: ['code']
+      })
+    }
+  })
+
+const TwoFactorSetupResSchema = z.object({
+  secret: z.string(),
+  url: z.string()
+})
+
 // type
 type RegisterBodyType = z.infer<typeof RegisterBodySchema>
 type RegisterResType = z.infer<typeof RegisterResSchema>
@@ -150,6 +182,8 @@ type DeviceType = z.infer<typeof DeviceSchema>
 type RoleType = z.infer<typeof RoleSchema>
 type GoogleAuthStateType = z.infer<typeof GoogleAuthStateSchema>
 type ForgotPasswordBodyType = z.infer<typeof ForgotPasswordBodySchema>
+type DisableTwoFactorBodyType = z.infer<typeof DisableTwoFactorBodySchema>
+type TwoFactorSetupResType = z.infer<typeof TwoFactorSetupResSchema>
 
 export {
   VerificationCodeSchema,
@@ -167,6 +201,8 @@ export {
   GoogleAuthStateSchema,
   GetAuthorizationUrlResSchema,
   ForgotPasswordBodySchema,
+  DisableTwoFactorBodySchema,
+  TwoFactorSetupResSchema,
   RegisterBodyType,
   RegisterResType,
   VerificationCodeType,
@@ -181,5 +217,7 @@ export {
   DeviceType,
   RoleType,
   GoogleAuthStateType,
-  ForgotPasswordBodyType
+  ForgotPasswordBodyType,
+  DisableTwoFactorBodyType,
+  TwoFactorSetupResType
 }

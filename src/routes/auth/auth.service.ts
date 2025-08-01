@@ -41,9 +41,11 @@ export class AuthService {
 
   async validateVerificationCode({ email, code, type }: { email: string; code: string; type: TypeOfVerificationCode }) {
     const verificationCode = await this.authRepository.findUniqueVerificationCode({
-      email,
-      code,
-      type
+      email_code_type: {
+        email,
+        code,
+        type
+      }
     })
 
     if (!verificationCode) {
@@ -122,12 +124,12 @@ export class AuthService {
   async register(createAuthDto: RegisterBodyType) {
     const { email, password, name, phoneNumber, code } = createAuthDto
 
-    const $verificationCode = this.validateVerificationCode({ email, code, type: VerificationCode.REGISTER })
+    await this.validateVerificationCode({ email, code, type: VerificationCode.REGISTER })
 
     const $getClientRole = this.rolesService.getClientRoleId()
     const $hashedPassword = this.sharedService.hash(password)
 
-    const [roleId, hashedPassword] = await Promise.all([$getClientRole, $hashedPassword, $verificationCode])
+    const [roleId, hashedPassword] = await Promise.all([$getClientRole, $hashedPassword])
 
     const $createUser = this.authRepository.createUser({
       email,
@@ -138,9 +140,11 @@ export class AuthService {
     })
 
     const $deleteVerificationCode = this.authRepository.deleteVerificationCode({
-      email,
-      code,
-      type: VerificationCode.REGISTER
+      email_code_type: {
+        email,
+        code,
+        type: VerificationCode.REGISTER
+      }
     })
 
     const [newUser] = await Promise.all([$createUser, $deleteVerificationCode])
@@ -272,9 +276,11 @@ export class AuthService {
       }
     )
     const $deleteVerificationCode = this.authRepository.deleteVerificationCode({
-      email,
-      code,
-      type: VerificationCode.FORGOT_PASSWORD
+      email_code_type: {
+        email,
+        code,
+        type: VerificationCode.FORGOT_PASSWORD
+      }
     })
 
     await Promise.all([$updateUser, $deleteVerificationCode])
