@@ -1,9 +1,10 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { OAuth2Client } from 'google-auth-library'
 import { google } from 'googleapis'
 import { AuthRepository } from 'src/routes/auth/auth.repo'
 import { AuthService } from 'src/routes/auth/auth.service'
 import { GoogleAuthStateType } from 'src/routes/auth/entities/auth.entity'
+import { GetGoogleInfoFailed } from 'src/routes/auth/error.model'
 import { RolesService } from 'src/routes/auth/roles.service'
 import envConfig from 'src/shared/config'
 import { SharedService } from 'src/shared/services/shared.service'
@@ -71,12 +72,7 @@ export class GoogleService {
     const { data } = await oauth2.userinfo.get()
 
     if (!data.email) {
-      throw new UnprocessableEntityException([
-        {
-          message: "Can't get user info from Google",
-          path: 'google'
-        }
-      ])
+      throw GetGoogleInfoFailed
     }
 
     let user = await this.authRepository.findUniqueUserIncludeRole({ email: data.email })
