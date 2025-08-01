@@ -107,6 +107,15 @@ const RoleBodySchema = RoleSchema.pick({
   updatedById: true
 }).strict()
 
+const GoogleAuthStateSchema = DeviceSchema.pick({
+  userAgent: true,
+  ip: true
+})
+
+const GetAuthorizationUrlResSchema = z.object({
+  url: z.string().url()
+})
+
 // type
 type RegisterBodyType = z.infer<typeof RegisterBodySchema>
 type RegisterResType = z.infer<typeof RegisterResSchema>
@@ -121,6 +130,7 @@ type RefreshTokenResType = z.infer<typeof RefreshTokenResSchema>
 type LogoutBodyType = z.infer<typeof LogoutBodySchema>
 type DeviceType = z.infer<typeof DeviceSchema>
 type RoleType = z.infer<typeof RoleSchema>
+type GoogleAuthStateType = z.infer<typeof GoogleAuthStateSchema>
 
 export {
   VerificationCodeSchema,
@@ -135,6 +145,8 @@ export {
   LogoutBodySchema,
   DeviceBodySchema,
   RoleBodySchema,
+  GoogleAuthStateSchema,
+  GetAuthorizationUrlResSchema,
   RegisterBodyType,
   RegisterResType,
   VerificationCodeType,
@@ -147,5 +159,6 @@ export {
   RefreshTokenResType,
   LogoutBodyType,
   DeviceType,
-  RoleType
+  RoleType,
+  GoogleAuthStateType
 }

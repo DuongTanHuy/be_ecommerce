@@ -85,19 +85,18 @@ export class AuthService {
       ])
     }
 
-    const [, tokens] = await Promise.all([
-      this.authRepository.createDevice({
-        userId: user.id,
-        userAgent: loginBodyDto.userAgent,
-        ip: loginBodyDto.ip
-      }),
-      this.generateToken({
-        userId: user.id,
-        deviceId: user.id,
-        roleId: user.roleId,
-        roleName: user.role.name
-      })
-    ])
+    const device = await this.authRepository.createDevice({
+      userId: user.id,
+      userAgent: loginBodyDto.userAgent,
+      ip: loginBodyDto.ip
+    })
+
+    const tokens = await this.generateToken({
+      userId: user.id,
+      deviceId: device.id,
+      roleId: user.roleId,
+      roleName: user.role.name
+    })
 
     return tokens
   }
