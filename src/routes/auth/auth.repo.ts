@@ -17,13 +17,28 @@ export class AuthRepository {
 
   // khong quy dinh kieu tra ve cung duoc vi prisma da quy dinh san roi, nhung sau nay neu co thay doi ORM thi van phai tra ve kieu da quy dinh (vi ORM moi co the tra ve kieu khac voi hien tai)
   createUser(
-    user: Omit<RegisterBodyType, 'code' | 'confirmPassword'> & Pick<UserType, 'roleId'>
+    user: Omit<RegisterBodyType, 'code' | 'confirmPassword'> &
+      Pick<UserType, 'roleId'> &
+      Partial<Pick<UserType, 'avatar'>>
   ): Promise<Omit<UserType, 'password' | 'totpSecret'>> {
     return this.prismaService.user.create({
       data: user,
       omit: {
         password: true,
         totpSecret: true
+      }
+    })
+  }
+
+  createUserIncludeRole(
+    user: Omit<RegisterBodyType, 'code' | 'confirmPassword'> &
+      Pick<UserType, 'roleId'> &
+      Partial<Pick<UserType, 'avatar'>>
+  ): Promise<UserType & { role: RoleType }> {
+    return this.prismaService.user.create({
+      data: user,
+      include: {
+        role: true
       }
     })
   }

@@ -4,6 +4,7 @@ import envConfig from 'src/shared/config'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
+  app.enableCors()
   await app.listen(envConfig.POST ?? 3000)
 }
 bootstrap()
