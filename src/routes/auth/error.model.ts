@@ -55,3 +55,31 @@ export const GetGoogleInfoFailed = new UnprocessableEntityException([
     path: 'google'
   }
 ])
+
+export const TOTPAlreadyEnabledException = new UnprocessableEntityException([
+  {
+    message: 'Totp secret already enable',
+    path: 'totpCode'
+  }
+])
+
+export const TOTPNotEnabledException = new UnprocessableEntityException([
+  {
+    message: 'Totp secret is not enabled',
+    path: 'totpCode'
+  }
+])
+
+export const InvalidTOTPAndCodeException = new UnprocessableEntityException([
+  {
+    message: 'Totp code is invalid',
+    path: 'code'
+  }
+])
+
+export const InvalidTOTPException = new UnprocessableEntityException([
+  {
+    message: 'Invalid totp exception',
+    path: 'totpCode'
+  }
+])
