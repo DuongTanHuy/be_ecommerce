@@ -53,6 +53,21 @@ const LoginBodySchema = UserSchema.pick({
     code: z.string().length(6).optional()
   })
   .strict()
+  .superRefine(({ totpCode, code }, ctx) => {
+    const message = 'Only one of totpCode or code should be provided'
+    if (totpCode !== undefined && code != undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        message,
+        path: ['totpCode']
+      })
+      ctx.addIssue({
+        code: 'custom',
+        message,
+        path: ['code']
+      })
+    }
+  })
 
 const LoginResSchema = z.object({
   accessToken: z.string(),
@@ -163,7 +178,7 @@ const DisableTwoFactorBodySchema = z
 
 const TwoFactorSetupResSchema = z.object({
   secret: z.string(),
-  url: z.string()
+  uri: z.string()
 })
 
 // type

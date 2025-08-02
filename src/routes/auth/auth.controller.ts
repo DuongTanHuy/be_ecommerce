@@ -1,6 +1,7 @@
 import { Controller, Post, Body, Ip, Get, Query, Res } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import {
+  DisableTwoFactorBodyDto,
   ForgotPasswordBodyDto,
   GetAuthorizationUrlResDto,
   LoginBodyDto,
@@ -10,7 +11,8 @@ import {
   RefreshTokenResDto,
   RegisterBodyDto,
   RegisterResDto,
-  SendOtpBodyDto
+  SendOtpBodyDto,
+  TwoFactorSetupResDto
 } from './dto/create-auth.dto'
 import { ZodSerializerDto } from 'nestjs-zod'
 import { UserAgent } from 'src/shared/decorators/user-agent.decorator'
@@ -19,6 +21,8 @@ import { IsPublic } from 'src/shared/decorators/auth.decorator'
 import { GoogleService } from 'src/routes/auth/google.service'
 import { Response } from 'express'
 import envConfig from 'src/shared/config'
+import { EmptyBodyDto } from 'src/shared/dtos/request.dto'
+import { ActiveUser } from 'src/shared/decorators/active-user.decorator'
 
 @Controller('auth')
 export class AuthController {
@@ -104,5 +108,23 @@ export class AuthController {
   @ZodSerializerDto(MessageResDto)
   forgotPassword(@Body() forgotPasswordBodyDto: ForgotPasswordBodyDto) {
     return this.authService.forgotPassword(forgotPasswordBodyDto)
+  }
+
+  // Tại sao không dùng GET mà dùng POST? khi mà body gửi lên là {}
+  // Vì POST mang ý nghĩa là tạo ra cái gì đó và POST cũng bảo mật hơn GET
+  // Vì GET có thể được kích hoạt thông qua URL trên trình duyệt, POST thì không
+  @Post('2fa/setup')
+  @ZodSerializerDto(TwoFactorSetupResDto)
+  setupTwoFactorAuth(@Body() _: EmptyBodyDto, @ActiveUser('userId') userId: number) {
+    return this.authService.setupTwoFactorAuth(userId)
+  }
+
+  @Post('2fa/disable')
+  @ZodSerializerDto(MessageResDto)
+  disableTwoFactorAuth(@Body() disableTwoFactorBodyDto: DisableTwoFactorBodyDto, @ActiveUser('userId') userId: number) {
+    return this.authService.disableTwoFactorAuth({
+      ...disableTwoFactorBodyDto,
+      userId
+    })
   }
 }

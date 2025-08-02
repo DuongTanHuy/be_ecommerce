@@ -3,6 +3,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { RolesService } from 'src/routes/auth/roles.service'
 import { SharedService } from 'src/shared/services/shared.service'
 import {
+  DisableTwoFactorBodyType,
   ForgotPasswordBodyType,
   LoginBodyType,
   RefreshTokenBodyType,
@@ -20,13 +21,18 @@ import { TokenService } from 'src/shared/services/token.service'
 import { AccessTokenPayloadCreate } from 'src/shared/types/jwt.type'
 import {
   InvalidOTPException,
+  InvalidTOTPAndCodeException,
+  InvalidTOTPException,
   OptCodeInvalid,
   PasswordIncorrect,
   RefreshTokenInvalid,
   SendOtpFailed,
+  TOTPAlreadyEnabledException,
+  TOTPNotEnabledException,
   UserIsExist,
   UserNotFound
 } from 'src/routes/auth/error.model'
+import { TwoFactorService } from 'src/shared/services/2fa.service'
 
 @Injectable()
 export class AuthService {
@@ -35,6 +41,7 @@ export class AuthService {
     private readonly rolesService: RolesService,
     private readonly emailService: EmailService,
     private readonly tokenService: TokenService,
+    private readonly twoFactorService: TwoFactorService,
     private readonly authRepository: AuthRepository,
     private readonly sharedUserRepository: SharedUserRepository
   ) {}
@@ -103,6 +110,30 @@ export class AuthService {
 
     if (!isPasswordMath) {
       throw PasswordIncorrect
+    }
+
+    if (user.totpSecret) {
+      if (!loginBodyDto.code && !loginBodyDto.totpCode) {
+        throw InvalidTOTPAndCodeException
+      }
+
+      if (loginBodyDto.totpCode) {
+        const isValid = this.twoFactorService.verifyTOTP({
+          email: loginBodyDto.email,
+          secret: user.totpSecret,
+          token: loginBodyDto.totpCode
+        })
+
+        if (!isValid) {
+          throw InvalidTOTPException
+        }
+      } else if (loginBodyDto.code) {
+        await this.validateVerificationCode({
+          email: user.email,
+          code: loginBodyDto.code,
+          type: VerificationCode.LOGIN
+        })
+      }
     }
 
     const device = await this.authRepository.createDevice({
@@ -287,6 +318,67 @@ export class AuthService {
 
     return {
       message: 'Change password successful'
+    }
+  }
+
+  async setupTwoFactorAuth(userId: number) {
+    const user = await this.sharedUserRepository.findUnique({ id: userId })
+
+    if (!user) {
+      throw UserNotFound
+    }
+
+    if (user.totpSecret) {
+      throw TOTPAlreadyEnabledException
+    }
+
+    const { secret, uri } = this.twoFactorService.generateTOTPSecret(user.email)
+
+    await this.authRepository.updateUser({ id: userId }, { totpSecret: secret })
+
+    return {
+      secret,
+      uri
+    }
+  }
+
+  async disableTwoFactorAuth(data: DisableTwoFactorBodyType & { userId: number }) {
+    const { userId, totpCode, code } = data
+    const user = await this.sharedUserRepository.findUnique({
+      id: userId
+    })
+
+    if (!user) {
+      throw UserNotFound
+    }
+
+    if (!user.totpSecret) {
+      throw TOTPNotEnabledException
+    }
+
+    if (totpCode) {
+      const isValid = this.twoFactorService.verifyTOTP({
+        email: user.email,
+        token: totpCode,
+        secret: user.totpSecret
+      })
+
+      if (!isValid) {
+        throw InvalidTOTPException
+      }
+    } else if (code) {
+      await this.validateVerificationCode({ email: user.email, code, type: VerificationCode.DISABLE_2FA })
+    }
+
+    await this.authRepository.updateUser(
+      { id: userId },
+      {
+        totpSecret: null
+      }
+    )
+
+    return {
+      message: 'Totp secret is disabled'
     }
   }
 }
