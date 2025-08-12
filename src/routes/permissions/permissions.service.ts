@@ -22,10 +22,12 @@ export class PermissionsService {
     const result = await this.permissionRepository.findById(id)
 
     if (!result) {
-      throw new UnprocessableEntityException({
-        message: 'Permission not found',
-        path: ''
-      })
+      throw new UnprocessableEntityException([
+        {
+          message: 'Permission not found',
+          path: 'permissionId'
+        }
+      ])
     }
 
     return result

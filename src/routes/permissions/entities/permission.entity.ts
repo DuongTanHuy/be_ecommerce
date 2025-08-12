@@ -1,17 +1,5 @@
-import { HTTPMethod } from 'src/shared/constants/role.constant'
+import { PermissionSchema } from 'src/shared/models/shared-permission.model'
 import z from 'zod'
-
-const PermissionSchema = z.object({
-  id: z.number(),
-  name: z.string().max(500),
-  description: z.string(),
-  path: z.string().max(1000),
-  method: z.nativeEnum(HTTPMethod),
-  createdById: z.number().nullable(),
-  updatedById: z.number().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date()
-})
 
 const GetPermissionQuerySchema = z
   .object({
@@ -42,8 +30,6 @@ const CreatePermissionBodySchema = PermissionSchema.pick({
 
 const UpdatePermissionBodySchema = PermissionSchema.partial().strict()
 
-type PermissionType = z.infer<typeof PermissionSchema>
-
 type GetPermissionQueryType = z.infer<typeof GetPermissionQuerySchema>
 type GetPermissionResType = z.infer<typeof GetPermissionResSchema>
 type GetPermissionParamsType = z.infer<typeof GetPermissionParamsSchema>
@@ -59,7 +45,6 @@ export {
   GetPermissionDetailResSchema,
   CreatePermissionBodySchema,
   UpdatePermissionBodySchema,
-  PermissionType,
   GetPermissionQueryType,
   GetPermissionResType,
   GetPermissionParamsType,

@@ -3,9 +3,9 @@ import {
   CreatePermissionBodyType,
   GetPermissionQueryType,
   GetPermissionResType,
-  PermissionType,
   UpdatePermissionBodyType
 } from 'src/routes/permissions/entities/permission.entity'
+import { PermissionType } from 'src/shared/models/shared-permission.model'
 import { PrismaService } from 'src/shared/services/prisma.service'
 
 @Injectable()
@@ -68,7 +68,7 @@ export class PermissionRepository {
         id: permissionId,
         deletedAt: null
       },
-      data: data
+      data
     })
   }
 
