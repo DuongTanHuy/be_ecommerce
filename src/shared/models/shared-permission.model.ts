@@ -9,8 +9,10 @@ const PermissionSchema = z.object({
   method: z.nativeEnum(HTTPMethod),
   createdById: z.number().nullable(),
   updatedById: z.number().nullable(),
+  deletedById: z.number().nullable(),
   createdAt: z.date(),
-  updatedAt: z.date()
+  updatedAt: z.date(),
+  deletedAt: z.date().nullable()
 })
 
 type PermissionType = z.infer<typeof PermissionSchema>
