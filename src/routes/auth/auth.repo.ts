@@ -3,11 +3,11 @@ import {
   DeviceType,
   RefreshTokenType,
   RegisterBodyType,
-  RoleType,
   VerificationCodeType
 } from 'src/routes/auth/entities/auth.entity'
 import { TypeOfVerificationCode } from 'src/shared/constants/auth.constant'
 import { RoleName } from 'src/shared/constants/role.constant'
+import { RoleType } from 'src/shared/models/shared-role.model'
 import { UserType } from 'src/shared/models/shared-user.model'
 import { PrismaService } from 'src/shared/services/prisma.service'
 
@@ -46,8 +46,10 @@ export class AuthRepository {
   getClientRoleId() {
     return this.prismaService.role.findFirstOrThrow({
       where: {
-        name: RoleName.Client
-      }
+        name: RoleName.Client,
+        deletedAt: null
+      },
+      take: 1
     })
   }
 

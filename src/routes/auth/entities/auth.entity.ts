@@ -1,4 +1,5 @@
 import { VerificationCode } from 'src/shared/constants/auth.constant'
+import { RoleSchema } from 'src/shared/models/shared-role.model'
 import { UserSchema } from 'src/shared/models/shared-user.model'
 import z from 'zod'
 
@@ -108,17 +109,6 @@ const DeviceBodySchema = DeviceSchema.pick({
   isActive: true
 }).strict()
 
-const RoleSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  description: z.string(),
-  isActive: z.boolean(),
-  createdById: z.number().nullable(),
-  updatedById: z.number().nullable(),
-  deletedAt: z.date().nullable(),
-  updatedAt: z.date()
-})
-
 const RoleBodySchema = RoleSchema.pick({
   name: true,
   description: true,
@@ -194,7 +184,6 @@ type RefreshTokenBodyType = z.infer<typeof RefreshTokenBodySchema>
 type RefreshTokenResType = z.infer<typeof RefreshTokenResSchema>
 type LogoutBodyType = z.infer<typeof LogoutBodySchema>
 type DeviceType = z.infer<typeof DeviceSchema>
-type RoleType = z.infer<typeof RoleSchema>
 type GoogleAuthStateType = z.infer<typeof GoogleAuthStateSchema>
 type ForgotPasswordBodyType = z.infer<typeof ForgotPasswordBodySchema>
 type DisableTwoFactorBodyType = z.infer<typeof DisableTwoFactorBodySchema>
@@ -230,7 +219,6 @@ export {
   RefreshTokenResType,
   LogoutBodyType,
   DeviceType,
-  RoleType,
   GoogleAuthStateType,
   ForgotPasswordBodyType,
   DisableTwoFactorBodyType,
