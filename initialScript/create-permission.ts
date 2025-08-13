@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from 'src/app.module'
 import envConfig from 'src/shared/config'
-import { HTTPMethod } from 'src/shared/constants/role.constant'
+import { HTTPMethod, RoleName } from 'src/shared/constants/role.constant'
 import { PrismaService } from 'src/shared/services/prisma.service'
 
 const prismaService = new PrismaService()
@@ -18,20 +18,23 @@ async function bootstrap() {
     }
   })
 
-  const availableRoutes: { path: string; method: keyof typeof HTTPMethod; name: string }[] = router.stack
-    .map((layer) => {
-      if (layer.route) {
-        const path = layer.route?.path
-        const method = String(layer.route?.stack[0].method).toLocaleUpperCase() as keyof typeof HTTPMethod
+  const availableRoutes: { path: string; method: keyof typeof HTTPMethod; name: string; module: string }[] =
+    router.stack
+      .map((layer) => {
+        if (layer.route) {
+          const path = layer.route?.path
+          const method = String(layer.route?.stack[0].method).toLocaleUpperCase() as keyof typeof HTTPMethod
+          const module = String(path.split('/')[1] ?? path.split('/')[0]).toUpperCase()
 
-        return {
-          name: method + ' ' + path,
-          path,
-          method
+          return {
+            name: method + ' ' + path,
+            path,
+            method,
+            module
+          }
         }
-      }
-    })
-    .filter((item) => item !== undefined)
+      })
+      .filter((item) => item !== undefined)
 
   const permissionInDbMap: {
     [key: string]: { id: number; path: string; method: keyof typeof HTTPMethod; name: string }
@@ -73,6 +76,30 @@ async function bootstrap() {
   } else {
     console.log('No new permissions to create')
   }
+
+  const updatedPermissions = await prismaService.permission.findMany({
+    where: {
+      deletedAt: null
+    }
+  })
+
+  const adminRole = await prismaService.role.findFirstOrThrow({
+    where: {
+      name: RoleName.Admin,
+      deletedAt: null
+    }
+  })
+
+  await prismaService.role.update({
+    where: {
+      id: adminRole.id
+    },
+    data: {
+      permissions: {
+        set: updatedPermissions.map((permission) => ({ id: permission.id }))
+      }
+    }
+  })
 
   process.exit(0)
 }
