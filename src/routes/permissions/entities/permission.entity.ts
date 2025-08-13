@@ -25,7 +25,8 @@ const GetPermissionDetailResSchema = PermissionSchema
 const CreatePermissionBodySchema = PermissionSchema.pick({
   name: true,
   path: true,
-  method: true
+  method: true,
+  module: true
 }).strict()
 
 const UpdatePermissionBodySchema = PermissionSchema.partial().strict()

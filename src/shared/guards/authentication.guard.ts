@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common'
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, HttpException } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { AuthType, ConditionGuard } from 'src/shared/constants/auth.constant'
 import { AUTH_TYPE_KEY, AuthTypeDecoratorPayload } from 'src/shared/decorators/auth.decorator'
@@ -22,39 +22,58 @@ export class AuthenticationGuard implements CanActivate {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const authTypeValue = this.reflector.getAllAndOverride<AuthTypeDecoratorPayload | undefined>(AUTH_TYPE_KEY, [
-      context.getHandler(),
-      context.getClass()
-    ]) ?? {
-      authType: [AuthType.Bearer],
-      option: {
-        condition: ConditionGuard.And
-      }
-    }
+    const authTypeValue = this.getAuthTypeValue(context)
 
     const guards = authTypeValue.authType.map((authType) => this.authTypeGuardMap[authType])
 
-    const condition = authTypeValue.option.condition
+    return authTypeValue.option.condition === ConditionGuard.And
+      ? this.handleAndCondition(guards, context)
+      : this.handleOrCondition(guards, context)
+  }
 
-    if (condition === ConditionGuard.Or) {
-      for (const guard of guards) {
-        const canActivate = await Promise.resolve(guard.canActivate(context)).catch(() => false)
+  private getAuthTypeValue(context: ExecutionContext): AuthTypeDecoratorPayload {
+    return (
+      this.reflector.getAllAndOverride<AuthTypeDecoratorPayload | undefined>(AUTH_TYPE_KEY, [
+        context.getHandler(),
+        context.getClass()
+      ]) ?? { authType: [AuthType.Bearer], option: { condition: ConditionGuard.And } }
+    )
+  }
 
-        if (canActivate) {
+  private async handleOrCondition(guards: CanActivate[], context: ExecutionContext) {
+    let lastError: any = null
+
+    // Duyệt qua hết các guard, nếu có 1 guard pass thì return true
+    for (const guard of guards) {
+      try {
+        if (await guard.canActivate(context)) {
           return true
         }
-      }
-
-      throw new UnauthorizedException()
-    }
-
-    if (condition === ConditionGuard.And) {
-      for (const guard of guards) {
-        // khong can tao canActivate vi guard.canActivate(context) tu throw error khi khong co token hoac api key
-        await guard.canActivate(context)
+      } catch (error) {
+        lastError = error
       }
     }
 
+    if (lastError instanceof HttpException) {
+      throw lastError
+    }
+    throw new UnauthorizedException()
+  }
+
+  private async handleAndCondition(guards: CanActivate[], context: ExecutionContext) {
+    // Duyệt qua hết các guard, nếu mọi guard đều pass thì return true
+    for (const guard of guards) {
+      try {
+        if (!(await guard.canActivate(context))) {
+          throw new UnauthorizedException()
+        }
+      } catch (error) {
+        if (error instanceof HttpException) {
+          throw error
+        }
+        throw new UnauthorizedException()
+      }
+    }
     return true
   }
 }

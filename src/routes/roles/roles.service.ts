@@ -1,6 +1,7 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common'
+import { ForbiddenException, Injectable, UnprocessableEntityException } from '@nestjs/common'
 import { CreateRoleBodyType, UpdateRoleBodyType } from 'src/routes/roles/entities/role.entity'
 import { RoleRepository } from 'src/routes/roles/roles.repo'
+import { RoleName } from 'src/shared/constants/role.constant'
 
 @Injectable()
 export class RolesService {
@@ -31,7 +32,9 @@ export class RolesService {
     return result
   }
 
-  update(id: number, userId: number, updateRoleDto: UpdateRoleBodyType) {
+  async update(id: number, userId: number, updateRoleDto: UpdateRoleBodyType) {
+    await this.verifyRole(id)
+
     return this.roleRepository.update(id, {
       ...updateRoleDto,
       updatedById: userId
@@ -39,10 +42,29 @@ export class RolesService {
   }
 
   async remove(id: number, userId: number) {
+    await this.verifyRole(id)
+
     await this.roleRepository.remove(id, userId)
 
     return {
       message: 'Role deleted successful'
+    }
+  }
+
+  private async verifyRole(roleId: number) {
+    const role = await this.roleRepository.findOne(roleId)
+    if (!role) {
+      throw new UnprocessableEntityException([
+        {
+          message: 'Role is not found',
+          path: 'roleId'
+        }
+      ])
+    }
+    const baseRoles: string[] = [RoleName.Admin, RoleName.Client, RoleName.Seller]
+
+    if (baseRoles.includes(role.name)) {
+      throw new ForbiddenException()
     }
   }
 }
