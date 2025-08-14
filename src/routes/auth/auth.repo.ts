@@ -9,6 +9,7 @@ import { TypeOfVerificationCode } from 'src/shared/constants/auth.constant'
 import { RoleName } from 'src/shared/constants/role.constant'
 import { RoleType } from 'src/shared/models/shared-role.model'
 import { UserType } from 'src/shared/models/shared-user.model'
+import { WhereUniqueUserType } from 'src/shared/repositories/shared-user.repo'
 import { PrismaService } from 'src/shared/services/prisma.service'
 
 @Injectable()
@@ -73,7 +74,7 @@ export class AuthRepository {
   }
 
   findUniqueVerificationCode(
-    uniqueObject:
+    where:
       | { id: number }
       | {
           email_code_type: {
@@ -84,7 +85,7 @@ export class AuthRepository {
         }
   ): Promise<VerificationCodeType | null> {
     return this.prismaService.verificationCode.findUnique({
-      where: uniqueObject
+      where
     })
   }
 
@@ -102,22 +103,20 @@ export class AuthRepository {
     })
   }
 
-  findUniqueUserIncludeRole(
-    uniqueObject: { email: string } | { id: number }
-  ): Promise<(UserType & { role: RoleType }) | null> {
+  findUniqueUserIncludeRole(where: WhereUniqueUserType): Promise<(UserType & { role: RoleType }) | null> {
     return this.prismaService.user.findUnique({
-      where: uniqueObject,
+      where,
       include: {
         role: true
       }
     })
   }
 
-  findUniqueRefreshTokenIncludeUserRole(uniqueObject: {
+  findUniqueRefreshTokenIncludeUserRole(where: {
     token: string
   }): Promise<(RefreshTokenType & { user: UserType & { role: RoleType } }) | null> {
     return this.prismaService.refreshToken.findUnique({
-      where: uniqueObject,
+      where,
       include: {
         user: {
           include: {
@@ -137,24 +136,17 @@ export class AuthRepository {
     })
   }
 
-  deleteRefreshToken(uniqueObject: { token: string }): Promise<RefreshTokenType> {
+  deleteRefreshToken(where: { token: string }): Promise<RefreshTokenType> {
     return this.prismaService.refreshToken.delete({
-      where: uniqueObject
-    })
-  }
-
-  updateUser(uniqueObject: { id: number } | { email: string }, data: Partial<Omit<UserType, 'id'>>): Promise<UserType> {
-    return this.prismaService.user.update({
-      where: uniqueObject,
-      data
+      where
     })
   }
 
   deleteVerificationCode(
-    uniqueObject: { id: number } | { email_code_type: { email: string; type: TypeOfVerificationCode; code: string } }
+    where: { id: number } | { email_code_type: { email: string; type: TypeOfVerificationCode; code: string } }
   ): Promise<VerificationCodeType> {
     return this.prismaService.verificationCode.delete({
-      where: uniqueObject
+      where
     })
   }
 }

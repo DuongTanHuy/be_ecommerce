@@ -33,7 +33,19 @@ export class RolesService {
   }
 
   async update(id: number, userId: number, updateRoleDto: UpdateRoleBodyType) {
-    await this.verifyRole(id)
+    const role = await this.roleRepository.findOne(id)
+    if (!role) {
+      throw new UnprocessableEntityException([
+        {
+          message: 'Role is not found',
+          path: 'roleId'
+        }
+      ])
+    }
+
+    if (role.name === RoleName.Admin) {
+      throw new ForbiddenException()
+    }
 
     return this.roleRepository.update(id, {
       ...updateRoleDto,
