@@ -21,13 +21,6 @@ export const UserNotFound = new UnprocessableEntityException([
   }
 ])
 
-export const PasswordIncorrect = new UnprocessableEntityException([
-  {
-    message: 'Password is incorrect',
-    path: 'password'
-  }
-])
-
 export const SendOtpFailed = new UnprocessableEntityException([
   {
     message: 'Send verification otp code failure',

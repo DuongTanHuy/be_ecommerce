@@ -1,4 +1,6 @@
 import { UserStatus } from 'src/shared/constants/auth.constant'
+import { PermissionSchema } from 'src/shared/models/shared-permission.model'
+import { RoleSchema } from 'src/shared/models/shared-role.model'
 import z from 'zod'
 
 const UserSchema = z.object({
@@ -18,6 +20,34 @@ const UserSchema = z.object({
   updatedAt: z.date()
 })
 
-type UserType = z.infer<typeof UserSchema>
+const ProfileSchema = UserSchema.omit({
+  password: true,
+  totpSecret: true
+}).extend({
+  role: RoleSchema.pick({
+    id: true,
+    name: true
+  }).extend({
+    permissions: z.array(
+      PermissionSchema.pick({
+        id: true,
+        name: true,
+        module: true,
+        path: true,
+        method: true
+      })
+    )
+  })
+})
 
-export { UserSchema, UserType }
+const ProfileUpdateResSchema = UserSchema.omit({
+  password: true,
+  totpSecret: true
+})
+
+type ProfileUpdateResType = z.infer<typeof ProfileUpdateResSchema>
+
+type UserType = z.infer<typeof UserSchema>
+type ProfileType = z.infer<typeof ProfileSchema>
+
+export { UserSchema, ProfileSchema, ProfileUpdateResSchema, UserType, ProfileType, ProfileUpdateResType }
