@@ -6,7 +6,6 @@ import {
   VerificationCodeType
 } from 'src/routes/auth/entities/auth.entity'
 import { TypeOfVerificationCode } from 'src/shared/constants/auth.constant'
-import { RoleName } from 'src/shared/constants/role.constant'
 import { RoleType } from 'src/shared/models/shared-role.model'
 import { UserType } from 'src/shared/models/shared-user.model'
 import { WhereUniqueUserType } from 'src/shared/repositories/shared-user.repo'
@@ -41,16 +40,6 @@ export class AuthRepository {
       include: {
         role: true
       }
-    })
-  }
-
-  getClientRoleId() {
-    return this.prismaService.role.findFirstOrThrow({
-      where: {
-        name: RoleName.Client,
-        deletedAt: null
-      },
-      take: 1
     })
   }
 
@@ -104,8 +93,11 @@ export class AuthRepository {
   }
 
   findUniqueUserIncludeRole(where: WhereUniqueUserType): Promise<(UserType & { role: RoleType }) | null> {
-    return this.prismaService.user.findUnique({
-      where,
+    return this.prismaService.user.findFirst({
+      where: {
+        ...where,
+        deletedAt: null
+      },
       include: {
         role: true
       }

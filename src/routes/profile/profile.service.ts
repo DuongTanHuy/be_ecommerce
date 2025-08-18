@@ -12,14 +12,13 @@ export class ProfileService {
 
   findOne(id: number) {
     return this.sharedUserRepository.findUniqueIncludeRolePermissions({
-      id,
-      deletedAt: null
+      id
     })
   }
 
   update(userId: number, updateProfileDto: ProfileUpdateBodyType) {
     return this.sharedUserRepository.update(
-      { id: userId, deletedAt: null },
+      { id: userId },
       {
         ...updateProfileDto,
         updatedById: userId
@@ -28,7 +27,7 @@ export class ProfileService {
   }
 
   async changePassword(userId: number, changePasswordBody: ChangePasswordBodyType) {
-    const user = await this.sharedUserRepository.findUnique({ id: userId, deletedAt: null })
+    const user = await this.sharedUserRepository.findUnique({ id: userId })
 
     if (!user) {
       throw new NotFoundException('User not found')
@@ -49,8 +48,7 @@ export class ProfileService {
 
     await this.sharedUserRepository.update(
       {
-        id: userId,
-        deletedAt: null
+        id: userId
       },
       {
         password: hashedPassword,

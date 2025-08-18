@@ -1,6 +1,5 @@
 import ms, { StringValue } from 'ms'
 import { Injectable, UnauthorizedException } from '@nestjs/common'
-import { RolesService } from 'src/routes/auth/roles.service'
 import { SharedService } from 'src/shared/services/shared.service'
 import {
   DisableTwoFactorBodyType,
@@ -33,17 +32,18 @@ import {
 } from 'src/routes/auth/auth.error'
 import { TwoFactorService } from 'src/shared/services/2fa.service'
 import { InvalidPasswordException } from 'src/shared/error'
+import SharedRoleRepository from 'src/shared/repositories/shared-role.repo'
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly sharedService: SharedService,
-    private readonly rolesService: RolesService,
     private readonly emailService: EmailService,
     private readonly tokenService: TokenService,
     private readonly twoFactorService: TwoFactorService,
     private readonly authRepository: AuthRepository,
-    private readonly sharedUserRepository: SharedUserRepository
+    private readonly sharedUserRepository: SharedUserRepository,
+    private readonly sharedRoleRepository: SharedRoleRepository
   ) {}
 
   async validateVerificationCode({ email, code, type }: { email: string; code: string; type: TypeOfVerificationCode }) {
@@ -100,7 +100,7 @@ export class AuthService {
       ip: string
     }
   ) {
-    const user = await this.authRepository.findUniqueUserIncludeRole({ email: loginBodyDto.email, deletedAt: null })
+    const user = await this.authRepository.findUniqueUserIncludeRole({ email: loginBodyDto.email })
 
     if (!user) {
       throw UserNotFound
@@ -157,7 +157,7 @@ export class AuthService {
 
     await this.validateVerificationCode({ email, code, type: VerificationCode.REGISTER })
 
-    const $getClientRole = this.rolesService.getClientRoleId()
+    const $getClientRole = this.sharedRoleRepository.getClientRoleId()
     const $hashedPassword = this.sharedService.hash(password)
 
     const [roleId, hashedPassword] = await Promise.all([$getClientRole, $hashedPassword])
@@ -185,7 +185,7 @@ export class AuthService {
 
   async sendOtp(sendOtpBodyDto: SendOtpBodyType) {
     const { email, type } = sendOtpBodyDto
-    const isUserExist = await this.sharedUserRepository.findUnique({ email, deletedAt: null })
+    const isUserExist = await this.sharedUserRepository.findUnique({ email })
 
     if (type === VerificationCode.REGISTER && isUserExist) {
       throw UserIsExist
@@ -284,7 +284,7 @@ export class AuthService {
   async forgotPassword(forgotPasswordBodyDto: ForgotPasswordBodyType) {
     const { email, code, newPassword } = forgotPasswordBodyDto
 
-    const isUserExist = await this.sharedUserRepository.findUnique({ email, deletedAt: null })
+    const isUserExist = await this.sharedUserRepository.findUnique({ email })
 
     if (!isUserExist) {
       throw UserNotFound
@@ -301,7 +301,7 @@ export class AuthService {
     const [hashedPassword] = await Promise.all([$hashedPassword, $validateVerificationCode])
 
     const $updateUser = this.sharedUserRepository.update(
-      { id: isUserExist.id, deletedAt: null },
+      { id: isUserExist.id },
       {
         password: hashedPassword,
         updatedById: isUserExist.id
@@ -323,7 +323,7 @@ export class AuthService {
   }
 
   async setupTwoFactorAuth(userId: number) {
-    const user = await this.sharedUserRepository.findUnique({ id: userId, deletedAt: null })
+    const user = await this.sharedUserRepository.findUnique({ id: userId })
 
     if (!user) {
       throw UserNotFound
@@ -335,7 +335,7 @@ export class AuthService {
 
     const { secret, uri } = this.twoFactorService.generateTOTPSecret(user.email)
 
-    await this.sharedUserRepository.update({ id: userId, deletedAt: null }, { totpSecret: secret, updatedById: userId })
+    await this.sharedUserRepository.update({ id: userId }, { totpSecret: secret, updatedById: userId })
 
     return {
       secret,
@@ -346,8 +346,7 @@ export class AuthService {
   async disableTwoFactorAuth(data: DisableTwoFactorBodyType & { userId: number }) {
     const { userId, totpCode, code } = data
     const user = await this.sharedUserRepository.findUnique({
-      id: userId,
-      deletedAt: null
+      id: userId
     })
 
     if (!user) {
@@ -373,7 +372,7 @@ export class AuthService {
     }
 
     await this.sharedUserRepository.update(
-      { id: userId, deletedAt: null },
+      { id: userId },
       {
         totpSecret: null,
         updatedById: userId
