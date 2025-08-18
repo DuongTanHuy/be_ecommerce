@@ -1,4 +1,4 @@
-import { PermissionSchema } from 'src/routes/permissions/entities/permission.entity'
+import { PermissionSchema } from 'src/shared/models/shared-permission.model'
 import { RoleSchema } from 'src/shared/models/shared-role.model'
 import z from 'zod'
 
@@ -53,7 +53,6 @@ type CreateRoleBodyType = z.infer<typeof CreateRoleBodySchema>
 type UpdateRoleBodyType = z.infer<typeof UpdateRoleBodySchema>
 
 export {
-  RoleSchema,
   GetRoleQuerySchema,
   GetRoleResSchema,
   GetRoleDetailParamsSchema,

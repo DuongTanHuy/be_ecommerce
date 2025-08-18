@@ -39,7 +39,6 @@ type CreatePermissionBodyType = z.infer<typeof CreatePermissionBodySchema>
 type UpdatePermissionBodyType = z.infer<typeof UpdatePermissionBodySchema>
 
 export {
-  PermissionSchema,
   GetPermissionQuerySchema,
   GetPermissionResSchema,
   GetPermissionParamsSchema,
