@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common'
+import { I18nContext } from 'nestjs-i18n'
 import BrandRepository from 'src/routes/brand/brand.repo'
 import { CreateBrandBodyType, GetBrandQueryType, UpdateBrandBodyType } from 'src/routes/brand/entities/brand.entity'
 
 @Injectable()
 export class BrandService {
-  constructor(private readonly brandRepository: BrandRepository) {}
+  constructor(
+    private readonly brandRepository: BrandRepository
+    // private readonly i18nService: I18nService<I18nTranslations>
+  ) {}
 
   create(userId: number, createBrandDto: CreateBrandBodyType) {
     return this.brandRepository.create({
@@ -14,11 +18,11 @@ export class BrandService {
   }
 
   findAll(pagination: GetBrandQueryType) {
-    return this.brandRepository.getAll(pagination)
+    return this.brandRepository.getAll(pagination, I18nContext.current()?.lang)
   }
 
   findOne(id: number) {
-    return this.brandRepository.findOne(id)
+    return this.brandRepository.findOne(id, I18nContext.current()?.lang)
   }
 
   update(id: number, userId: number, updateBrandDto: UpdateBrandBodyType) {

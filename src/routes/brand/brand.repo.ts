@@ -6,6 +6,7 @@ import {
   GetBrandResType,
   UpdateBrandBodyType
 } from 'src/routes/brand/entities/brand.entity'
+import { ALL_LANGUAGE_CODE } from 'src/shared/constants/other.constant'
 import { PrismaService } from 'src/shared/services/prisma.service'
 
 @Injectable()
@@ -30,7 +31,7 @@ export default class BrandRepository {
           brandTranslations: {
             where: {
               deletedAt: null,
-              ...(languageId && {
+              ...(languageId !== ALL_LANGUAGE_CODE && {
                 languageId
               })
             }
@@ -73,7 +74,7 @@ export default class BrandRepository {
         brandTranslations: {
           where: {
             deletedAt: null,
-            ...(languageId && {
+            ...(languageId !== ALL_LANGUAGE_CODE && {
               languageId
             })
           }

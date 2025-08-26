@@ -1,3 +1,4 @@
+import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n'
 import { Module } from '@nestjs/common'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
@@ -16,9 +17,19 @@ import { UserModule } from './routes/user/user.module'
 import { MediaModule } from './routes/media/media.module'
 import { BrandModule } from './routes/brand/brand.module'
 import { BrandTranslationModule } from './routes/brand-translation/brand-translation.module'
+import path from 'path'
 
 @Module({
   imports: [
+    I18nModule.forRoot({
+      fallbackLanguage: 'en',
+      loaderOptions: {
+        path: path.resolve('src/i18n/'),
+        watch: true
+      },
+      typesOutputPath: path.resolve('src/generated/i18n.generated.ts'),
+      resolvers: [{ use: QueryResolver, options: ['lang'] }, AcceptLanguageResolver]
+    }),
     SharedModule,
     AuthModule,
     LanguagesModule,
