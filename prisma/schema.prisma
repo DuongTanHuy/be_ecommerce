@@ -29,7 +29,7 @@ model Language {
 
 model User {
   id                          Int                   @id @default(autoincrement())
-  email                       String                
+  email                       String
   name                        String                @db.VarChar(500)
   password                    String                @db.VarChar(500)
   phoneNumber                 String                @db.VarChar(50)
@@ -167,13 +167,13 @@ model Permission {
   description String     @default("")
   path        String     @db.VarChar(1000)
   method      HTTPMethod
-  module      String     @db.VarChar(500) @default("")
   createdById Int?
   updatedById Int?
   deletedAt   DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   deletedById Int?
+  module      String     @default("") @db.VarChar(500)
   createdBy   User?      @relation("PermissionCreatedBy", fields: [createdById], references: [id], onUpdate: NoAction)
   deletedBy   User?      @relation("PermissionDeletedBy", fields: [deletedById], references: [id], onUpdate: NoAction)
   updatedBy   User?      @relation("PermissionUpdatedBy", fields: [updatedById], references: [id], onUpdate: NoAction)
@@ -360,6 +360,7 @@ model Brand {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   deletedById       Int?
+  name              String             @db.VarChar(500)
   createdBy         User?              @relation("BrandCreatedBy", fields: [createdById], references: [id], onUpdate: NoAction)
   deletedBy         User?              @relation("BrandDeletedBy", fields: [deletedById], references: [id], onUpdate: NoAction)
   updatedBy         User?              @relation("BrandUpdatedBy", fields: [updatedById], references: [id], onUpdate: NoAction)
