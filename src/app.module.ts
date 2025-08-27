@@ -17,6 +17,8 @@ import { UserModule } from './routes/user/user.module'
 import { MediaModule } from './routes/media/media.module'
 import { BrandModule } from './routes/brand/brand.module'
 import { BrandTranslationModule } from './routes/brand-translation/brand-translation.module'
+import { CategoryModule } from './routes/category/category.module'
+import { CategoryTranslationModule } from './routes/category-translation/category-translation.module'
 import path from 'path'
 
 @Module({
@@ -39,7 +41,9 @@ import path from 'path'
     UserModule,
     MediaModule,
     BrandModule,
-    BrandTranslationModule
+    BrandTranslationModule,
+    CategoryModule,
+    CategoryTranslationModule
   ],
   controllers: [AppController],
   providers: [
