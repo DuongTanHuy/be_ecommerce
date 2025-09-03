@@ -1,12 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { CreateBrandBodyDto } from 'src/routes/brand/dto/create-brand.dto'
-import {
-  BrandType,
-  GetBrandQueryType,
-  GetBrandResType,
-  UpdateBrandBodyType
-} from 'src/routes/brand/entities/brand.entity'
+import { GetBrandQueryType, GetBrandResType, UpdateBrandBodyType } from 'src/routes/brand/entities/brand.entity'
 import { ALL_LANGUAGE_CODE } from 'src/shared/constants/other.constant'
+import { BrandType } from 'src/shared/models/shared-brand.model'
 import { PrismaService } from 'src/shared/services/prisma.service'
 
 @Injectable()
