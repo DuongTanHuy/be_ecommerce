@@ -3,26 +3,31 @@ import {
   CreateProductTranslationBodyType,
   UpdateProductTranslationBodyType
 } from 'src/routes/product-translation/entities/product-translation.entity'
+import ProductTranslationRepository from 'src/routes/product-translation/product-translation.repo'
 
 @Injectable()
 export class ProductTranslationService {
-  create(createProductTranslationDto: CreateProductTranslationBodyType) {
-    return 'This action adds a new productTranslation'
-  }
+  constructor(private readonly productTranslationRepository: ProductTranslationRepository) {}
 
-  findAll() {
-    return `This action returns all productTranslation`
+  create(userId: number, createProductTranslationDto: CreateProductTranslationBodyType) {
+    return this.productTranslationRepository.create({
+      ...createProductTranslationDto,
+      createdById: userId
+    })
   }
 
   findOne(id: number) {
-    return `This action returns a #${id} productTranslation`
+    return this.productTranslationRepository.findById(id)
   }
 
-  update(id: number, updateProductTranslationDto: UpdateProductTranslationBodyType) {
-    return `This action updates a #${id} productTranslation`
+  update(id: number, userId: number, updateProductTranslationDto: UpdateProductTranslationBodyType) {
+    return this.productTranslationRepository.update(id, {
+      ...updateProductTranslationDto,
+      updatedById: userId
+    })
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} productTranslation`
+  remove(id: number, userId: number) {
+    return this.productTranslationRepository.delete(id, userId)
   }
 }

@@ -1,33 +1,28 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common'
+import { Controller, Get, Param, Query } from '@nestjs/common'
 import { ProductService } from './product.service'
-import { CreateProductBodyDto, UpdateProductBodyDto } from 'src/routes/product/dto/create-product.dto'
+import {
+  GetProductDetailResDto,
+  GetProductParamsDto,
+  GetProductsQueryDto,
+  GetProductsResDto
+} from 'src/routes/product/dto/create-product.dto'
+import { IsPublic } from 'src/shared/decorators/auth.decorator'
+import { ZodSerializerDto } from 'nestjs-zod'
 
 @Controller('product')
+@IsPublic()
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
-  @Post()
-  create(@Body() createProductDto: CreateProductBodyDto) {
-    return this.productService.create(createProductDto)
-  }
-
   @Get()
-  findAll() {
-    return this.productService.findAll()
+  @ZodSerializerDto(GetProductsResDto)
+  findAll(@Query() query: GetProductsQueryDto) {
+    return this.productService.findAll(query)
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.productService.findOne(+id)
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductBodyDto) {
-    return this.productService.update(+id, updateProductDto)
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.productService.remove(+id)
+  @Get(':productId')
+  @ZodSerializerDto(GetProductDetailResDto)
+  findOne(@Param() params: GetProductParamsDto) {
+    return this.productService.getDetail(params.productId)
   }
 }

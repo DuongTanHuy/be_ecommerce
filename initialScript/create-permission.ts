@@ -4,6 +4,8 @@ import envConfig from 'src/shared/config'
 import { HTTPMethod, RoleName } from 'src/shared/constants/role.constant'
 import { PrismaService } from 'src/shared/services/prisma.service'
 
+const SellerModule = ['AUTH', 'MEDIA', 'MANAGE-PRODUCT', 'PRODUCT-TRANSLATION', 'PROFILE']
+
 const prismaService = new PrismaService()
 
 async function bootstrap() {
@@ -77,31 +79,45 @@ async function bootstrap() {
     console.log('No new permissions to create')
   }
 
-  const updatedPermissions = await prismaService.permission.findMany({
+  const updatedPermissionsInDb = await prismaService.permission.findMany({
     where: {
       deletedAt: null
     }
   })
 
-  const adminRole = await prismaService.role.findFirstOrThrow({
+  const adminPermissionIds = updatedPermissionsInDb.map((permission) => ({ id: permission.id }))
+  const sellerPermissionIds = updatedPermissionsInDb
+    .filter((permission) => SellerModule.includes(permission.module))
+    .map((permission) => ({ id: permission.id }))
+
+  await Promise.all([updateRole(adminPermissionIds, RoleName.Admin), updateRole(sellerPermissionIds, RoleName.Seller)])
+
+  process.exit(0)
+}
+
+const updateRole = async (
+  permissionIds: {
+    id: number
+  }[],
+  roleName: (typeof RoleName)[keyof typeof RoleName]
+) => {
+  const role = await prismaService.role.findFirstOrThrow({
     where: {
-      name: RoleName.Admin,
+      name: roleName,
       deletedAt: null
     }
   })
 
   await prismaService.role.update({
     where: {
-      id: adminRole.id
+      id: role.id
     },
     data: {
       permissions: {
-        set: updatedPermissions.map((permission) => ({ id: permission.id }))
+        set: permissionIds
       }
     }
   })
-
-  process.exit(0)
 }
 
 bootstrap()

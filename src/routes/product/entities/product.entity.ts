@@ -1,3 +1,4 @@
+import { OrderBy, SortBy } from 'src/shared/constants/other.constant'
 import { BrandIncludeTranslationSchema } from 'src/shared/models/shared-brand.model'
 import { CategoryIncludeTranslationSchema } from 'src/shared/models/shared-category.model'
 import { ProductTranslationSchema } from 'src/shared/models/shared-product-translation.model'
@@ -26,17 +27,17 @@ function generateSKUs(variants: VariantsType) {
 }
 
 const VariantSchema = z.object({
-  value: z.string(),
-  options: z.array(z.string())
+  value: z.string().trim(),
+  options: z.array(z.string().trim())
 })
 
 const VariantsSchema = z.array(VariantSchema).superRefine((variants, ctx) => {
   for (let i = 0; i < variants.length; i++) {
     const variant = variants[i]
 
-    const isDifferent = variants.findIndex((v) => v.value === variant.value) !== i
+    const isExistingVariant = variants.findIndex((v) => v.value.toLowerCase() === variant.value.toLowerCase()) !== i
 
-    if (!isDifferent) {
+    if (isExistingVariant) {
       return ctx.addIssue({
         code: 'custom',
         message: `Value ${variant.value} is already exist in variants list.`,
@@ -44,7 +45,10 @@ const VariantsSchema = z.array(VariantSchema).superRefine((variants, ctx) => {
       })
     }
 
-    const isDifferentOption = variant.options.findIndex((o) => variant.options.includes(o)) !== i
+    const isDifferentOption = variant.options.some((option, index) => {
+      const isExistingOption = variant.options.findIndex((o) => o.toLowerCase() === option.toLowerCase()) !== index
+      return isExistingOption
+    })
 
     if (isDifferentOption) {
       return ctx.addIssue({
@@ -59,9 +63,9 @@ const VariantsSchema = z.array(VariantSchema).superRefine((variants, ctx) => {
 const ProductSchema = z.object({
   id: z.number(),
   publishedAt: z.coerce.date().nullable(),
-  name: z.string().max(500),
-  basePrice: z.number().positive(),
-  virtualPrice: z.number().positive(),
+  name: z.string().trim().max(500),
+  basePrice: z.number().min(0),
+  virtualPrice: z.number().min(0),
   brandId: z.number().positive(),
   images: z.array(z.string()),
   variants: VariantsSchema,
@@ -73,14 +77,36 @@ const ProductSchema = z.object({
   deletedAt: z.date().nullable()
 })
 
+// Danh cho client va guest
 const GetProductsQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().default(10),
   name: z.string().optional(),
-  brandIds: z.array(z.coerce.number().int().optional()).optional(),
-  categories: z.array(z.coerce.number().int().positive()).optional(),
+  brandIds: z.preprocess((value) => {
+    if (typeof value === 'string') {
+      return [Number(value)]
+    }
+
+    return value
+  }, z.array(z.coerce.number().int().positive()).optional()),
+  categories: z.preprocess((value) => {
+    if (typeof value === 'string') {
+      return [Number(value)]
+    }
+
+    return value
+  }, z.array(z.coerce.number().int().positive()).optional()),
   minPrice: z.coerce.number().positive().optional(),
-  maxPrice: z.coerce.number().positive().optional()
+  maxPrice: z.coerce.number().positive().optional(),
+  createdById: z.coerce.number().int().positive().optional(),
+  orderBy: z.nativeEnum(OrderBy).default(OrderBy.Desc),
+  sortBy: z.nativeEnum(SortBy).default(SortBy.CreatedAt)
+})
+
+// Danh cho admin va seller
+const GetManageProductsQuerySchema = GetProductsQuerySchema.extend({
+  isPublic: z.preprocess((value) => value === 'true', z.boolean()).optional(),
+  createdById: z.coerce.number().int().positive()
 })
 
 const GetProductsResSchema = z.object({
@@ -159,6 +185,8 @@ type ProductType = z.infer<typeof ProductSchema>
 
 type GetProductsQueryType = z.infer<typeof GetProductsQuerySchema>
 
+type GetManageProductsQueryType = z.infer<typeof GetManageProductsQuerySchema>
+
 type GetProductsResType = z.infer<typeof GetProductsResSchema>
 
 type GetProductParamsType = z.infer<typeof GetProductParamsSchema>
@@ -174,6 +202,7 @@ export {
   VariantsSchema,
   ProductSchema,
   GetProductsQuerySchema,
+  GetManageProductsQuerySchema,
   GetProductsResSchema,
   GetProductParamsSchema,
   GetProductDetailResSchema,
@@ -183,6 +212,7 @@ export {
   VariantsType,
   ProductType,
   GetProductsQueryType,
+  GetManageProductsQueryType,
   GetProductsResType,
   GetProductParamsType,
   GetProductDetailResType,

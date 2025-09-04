@@ -1,25 +1,25 @@
 import { Injectable } from '@nestjs/common'
-import { CreateProductBodyType, UpdateProductBodyType } from 'src/routes/product/entities/product.entity'
+import { I18nContext } from 'nestjs-i18n'
+import { GetProductsQueryType } from 'src/routes/product/entities/product.entity'
+import ProductRepository from 'src/routes/product/product.repo'
 
 @Injectable()
 export class ProductService {
-  create(createProductDto: CreateProductBodyType) {
-    return 'This action adds a new product'
+  constructor(private readonly productRepository: ProductRepository) {}
+
+  findAll(query: GetProductsQueryType) {
+    return this.productRepository.list({
+      ...query,
+      isPublic: true,
+      languageId: I18nContext.current()?.lang as string
+    })
   }
 
-  findAll() {
-    return `This action returns all product`
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} product`
-  }
-
-  update(id: number, updateProductDto: UpdateProductBodyType) {
-    return `This action updates a #${id} product`
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} product`
+  getDetail(id: number) {
+    return this.productRepository.getDetail({
+      productId: id,
+      languageId: I18nContext.current()?.lang as string,
+      isPublic: true
+    })
   }
 }
