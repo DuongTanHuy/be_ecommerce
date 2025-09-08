@@ -2,6 +2,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator json {
+  provider = "prisma-json-types-generator"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -94,12 +98,6 @@ model User {
   deletedUserTranslations     UserTranslation[]     @relation("UserTranslationDeletedBy")
   updatedUserTranslations     UserTranslation[]     @relation("UserTranslationUpdatedBy")
   userTranslations            UserTranslation[]     @relation("User")
-  createdVariants             Variant[]             @relation("VariantCreatedBy")
-  deletedVariants             Variant[]             @relation("VariantDeletedBy")
-  updatedVariants             Variant[]             @relation("VariantUpdatedBy")
-  createdVariantOptions       VariantOption[]       @relation("VariantOptionCreatedBy")
-  deletedVariantOptions       VariantOption[]       @relation("VariantOptionDeletedBy")
-  updatedVariantOptions       VariantOption[]       @relation("VariantOptionUpdatedBy")
 
   @@index([deletedAt])
 }
@@ -204,24 +202,29 @@ model Role {
 
 model Product {
   id                  Int                  @id @default(autoincrement())
-  base_price          Float
-  virtual_price       Float
   brandId             Int
-  images              String[]
   createdById         Int?
   updatedById         Int?
   deletedAt           DateTime?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   deletedById         Int?
+  basePrice           Float
+  name                String               @db.VarChar(500)
+  publishedAt         DateTime?
+  variantOrder        Int[]
+  /// [Variants]
+  variants            Json
+  virtualPrice        Float
+  images              String[]
   brand               Brand                @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   createdBy           User?                @relation("ProductCreatedBy", fields: [createdById], references: [id], onUpdate: NoAction)
   deletedBy           User?                @relation("ProductDeletedBy", fields: [deletedById], references: [id], onUpdate: NoAction)
   updatedBy           User?                @relation("ProductUpdatedBy", fields: [updatedById], references: [id], onUpdate: NoAction)
   productTranslations ProductTranslation[]
+  orders              Order[]
   reviews             Review[]
   skus                SKU[]
-  variants            Variant[]
   categories          Category[]           @relation("CategoryToProduct")
 
   @@index([deletedAt])
@@ -246,12 +249,11 @@ model ProductTranslation {
   updatedBy   User?     @relation("ProductTranslationUpdatedBy", fields: [updatedById], references: [id], onUpdate: NoAction)
 
   @@index([deletedAt])
+  @@index([productId])
 }
 
 model Category {
   id                   Int                   @id @default(autoincrement())
-  name                 String                @db.VarChar(500)
-  logo                 String?               @db.VarChar(1000)
   parentCategoryId     Int?
   createdById          Int?
   updatedById          Int?
@@ -259,6 +261,8 @@ model Category {
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   deletedById          Int?
+  logo                 String?               @db.VarChar(1000)
+  name                 String                @db.VarChar(500)
   createdBy            User?                 @relation("CategoryCreatedBy", fields: [createdById], references: [id], onUpdate: NoAction)
   deletedBy            User?                 @relation("CategoryDeletedBy", fields: [deletedById], references: [id], onUpdate: NoAction)
   parentCategory       Category?             @relation("ParentCategoryCategories", fields: [parentCategoryId], references: [id], onUpdate: NoAction)
@@ -291,50 +295,11 @@ model CategoryTranslation {
   @@index([deletedAt])
 }
 
-model Variant {
-  id             Int             @id @default(autoincrement())
-  name           String          @db.VarChar(500)
-  productId      Int
-  createdById    Int?
-  updatedById    Int?
-  deletedAt      DateTime?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  deletedById    Int?
-  createdBy      User?           @relation("VariantCreatedBy", fields: [createdById], references: [id], onUpdate: NoAction)
-  deletedBy      User?           @relation("VariantDeletedBy", fields: [deletedById], references: [id], onUpdate: NoAction)
-  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  updatedBy      User?           @relation("VariantUpdatedBy", fields: [updatedById], references: [id], onUpdate: NoAction)
-  variantOptions VariantOption[]
-
-  @@index([deletedAt])
-}
-
-model VariantOption {
-  id          Int       @id @default(autoincrement())
-  value       String    @db.VarChar(500)
-  variantId   Int
-  createdById Int?
-  updatedById Int?
-  deletedAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedById Int?
-  createdBy   User?     @relation("VariantOptionCreatedBy", fields: [createdById], references: [id], onUpdate: NoAction)
-  deletedBy   User?     @relation("VariantOptionDeletedBy", fields: [deletedById], references: [id], onUpdate: NoAction)
-  updatedBy   User?     @relation("VariantOptionUpdatedBy", fields: [updatedById], references: [id], onUpdate: NoAction)
-  variant     Variant   @relation(fields: [variantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  skus        SKU[]     @relation("SKUToVariantOption")
-
-  @@index([deletedAt])
-}
-
 model SKU {
   id                  Int                  @id @default(autoincrement())
   value               String               @db.VarChar(500)
   price               Float
   stock               Int
-  images              String[]
   productId           Int
   createdById         Int?
   updatedById         Int?
@@ -342,13 +307,13 @@ model SKU {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   deletedById         Int?
+  image               String
   cartItems           CartItem[]
   productSKUSnapshots ProductSKUSnapshot[]
   createdBy           User?                @relation("SKUCreatedBy", fields: [createdById], references: [id], onUpdate: NoAction)
   deletedBy           User?                @relation("SKUDeletedBy", fields: [deletedById], references: [id], onUpdate: NoAction)
   product             Product              @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   updatedBy           User?                @relation("SKUUpdatedBy", fields: [updatedById], references: [id], onUpdate: NoAction)
-  variantOptions      VariantOption[]      @relation("SKUToVariantOption")
 
   @@index([deletedAt])
 }
@@ -427,6 +392,7 @@ model Order {
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
   deletedById Int?
+  products    Product[]
   createdBy   User?                @relation("OrderCreatedBy", fields: [createdById], references: [id], onUpdate: NoAction)
   deletedBy   User?                @relation("OrderDeletedBy", fields: [deletedById], references: [id], onUpdate: NoAction)
   updatedBy   User?                @relation("OrderUpdatedBy", fields: [updatedById], references: [id], onUpdate: NoAction)
@@ -434,6 +400,7 @@ model Order {
   items       ProductSKUSnapshot[]
 
   @@index([deletedAt])
+  @@index([status, deletedAt])
 }
 
 model Review {
