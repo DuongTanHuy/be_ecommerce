@@ -17,19 +17,33 @@ import { PrismaService } from 'src/shared/services/prisma.service'
 export default class CartRepository {
   constructor(private readonly prismaService: PrismaService) {}
 
-  private async validateSku(skuId: number, quantity: number) {
-    const sku = await this.prismaService.sKU.findUnique({
-      where: {
-        id: skuId,
-        deletedAt: null
-      },
-      include: {
-        product: true
-      }
-    })
+  private async validateSku(skuId: number, quantity: number, userId: number, isCreate: boolean) {
+    const [sku, cartItem] = await Promise.all([
+      this.prismaService.sKU.findUnique({
+        where: {
+          id: skuId,
+          deletedAt: null
+        },
+        include: {
+          product: true
+        }
+      }),
+      this.prismaService.cartItem.findUnique({
+        where: {
+          userId_skuId: {
+            userId,
+            skuId
+          }
+        }
+      })
+    ])
 
     if (!sku) {
       throw NotFoundRecordException
+    }
+
+    if (isCreate && cartItem && quantity + cartItem.quantity > sku.stock) {
+      throw new BadRequestException('Invalid cart item quantity')
     }
 
     if (sku.stock < 1 || quantity > sku.stock) {
@@ -219,7 +233,7 @@ export default class CartRepository {
       userId: number
     }
   ): Promise<CartItemType> {
-    await this.validateSku(data.skuId, data.quantity)
+    await this.validateSku(data.skuId, data.quantity, data.userId, true)
 
     return this.prismaService.cartItem.upsert({
       where: {
@@ -237,12 +251,13 @@ export default class CartRepository {
     })
   }
 
-  async update(id: number, data: UpdateCartItemBodyType): Promise<CartItemType> {
-    await this.validateSku(data.skuId, data.quantity)
+  async update(id: number, userId: number, data: UpdateCartItemBodyType): Promise<CartItemType> {
+    await this.validateSku(data.skuId, data.quantity, userId, false)
 
     return this.prismaService.cartItem.update({
       where: {
-        id
+        id,
+        userId
       },
       data
     })
