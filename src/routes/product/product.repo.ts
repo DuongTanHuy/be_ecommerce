@@ -5,10 +5,10 @@ import {
   GetProductDetailResType,
   GetProductsQueryType,
   GetProductsResType,
-  ProductType,
   UpdateProductBodyType
 } from 'src/routes/product/entities/product.entity'
 import { ALL_LANGUAGE_CODE, SortBy } from 'src/shared/constants/other.constant'
+import { ProductType } from 'src/shared/models/shared-product.model'
 import { PrismaService } from 'src/shared/services/prisma.service'
 
 @Injectable()
@@ -91,7 +91,6 @@ export default class ProductRepository {
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
     let calculatedOrderBy: Prisma.ProductOrderByWithRelationInput | Prisma.ProductOrderByWithRelationInput[] = {
       createdAt: orderBy
     }
