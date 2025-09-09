@@ -19,8 +19,8 @@ export class CartService {
     return this.cartRepository.findAllV2(query, userId, I18nContext.current()?.lang as string)
   }
 
-  update(id: number, updateCartDto: UpdateCartItemBodyType) {
-    return this.cartRepository.update(id, updateCartDto)
+  update(id: number, userId: number, updateCartDto: UpdateCartItemBodyType) {
+    return this.cartRepository.update(id, userId, updateCartDto)
   }
 
   async remove(userId: number, body: DeleteCartBodyType) {

@@ -4,8 +4,8 @@ import envConfig from 'src/shared/config'
 import { HTTPMethod, RoleName } from 'src/shared/constants/role.constant'
 import { PrismaService } from 'src/shared/services/prisma.service'
 
-const SellerModule = ['AUTH', 'MEDIA', 'MANAGE-PRODUCT', 'PRODUCT-TRANSLATION', 'CART', 'PROFILE']
-const ClientModule = ['AUTH', 'MEDIA', 'CART', 'PROFILE']
+const SellerModule = ['AUTH', 'MEDIA', 'MANAGE-PRODUCT', 'PRODUCT-TRANSLATION', 'CART', 'PROFILE', 'ORDERS']
+const ClientModule = ['AUTH', 'MEDIA', 'CART', 'PROFILE', 'ORDERS']
 
 const prismaService = new PrismaService()
 
