@@ -98,6 +98,7 @@ model User {
   deletedUserTranslations     UserTranslation[]     @relation("UserTranslationDeletedBy")
   updatedUserTranslations     UserTranslation[]     @relation("UserTranslationUpdatedBy")
   userTranslations            UserTranslation[]     @relation("User")
+  soldOrders                        Order[]               @relation("Shop")
 
   @@index([deletedAt])
 }
@@ -203,7 +204,7 @@ model Role {
 model Product {
   id                  Int                  @id @default(autoincrement())
   brandId             Int
-  createdById         Int?
+  createdById         Int
   updatedById         Int?
   deletedAt           DateTime?
   createdAt           DateTime             @default(now())
@@ -218,14 +219,15 @@ model Product {
   virtualPrice        Float
   images              String[]
   brand               Brand                @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  createdBy           User?                @relation("ProductCreatedBy", fields: [createdById], references: [id], onUpdate: NoAction)
-  deletedBy           User?                @relation("ProductDeletedBy", fields: [deletedById], references: [id], onUpdate: NoAction)
-  updatedBy           User?                @relation("ProductUpdatedBy", fields: [updatedById], references: [id], onUpdate: NoAction)
+  createdBy           User                @relation("ProductCreatedBy", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  deletedBy           User?                @relation("ProductDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  updatedBy           User?                @relation("ProductUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
   productTranslations ProductTranslation[]
   orders              Order[]
   reviews             Review[]
   skus                SKU[]
   categories          Category[]           @relation("CategoryToProduct")
+  productSKUSnapshots ProductSKUSnapshot[]
 
   @@index([deletedAt])
 }
@@ -301,7 +303,7 @@ model SKU {
   price               Float
   stock               Int
   productId           Int
-  createdById         Int?
+  createdById         Int
   updatedById         Int?
   deletedAt           DateTime?
   createdAt           DateTime             @default(now())
@@ -310,12 +312,13 @@ model SKU {
   image               String
   cartItems           CartItem[]
   productSKUSnapshots ProductSKUSnapshot[]
-  createdBy           User?                @relation("SKUCreatedBy", fields: [createdById], references: [id], onUpdate: NoAction)
-  deletedBy           User?                @relation("SKUDeletedBy", fields: [deletedById], references: [id], onUpdate: NoAction)
+  createdBy           User                @relation("SKUCreatedBy", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  deletedBy           User?                @relation("SKUDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
   product             Product              @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  updatedBy           User?                @relation("SKUUpdatedBy", fields: [updatedById], references: [id], onUpdate: NoAction)
+  updatedBy           User?                @relation("SKUUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([deletedAt])
+  @@index([productId])
 }
 
 model Brand {
@@ -365,20 +368,28 @@ model CartItem {
   userId    Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  sku       SKU      @relation(fields: [skuId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sku       SKU      @relation(fields: [skuId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, skuId])
+  @@index([userId])
 }
 
 model ProductSKUSnapshot {
   id          Int      @id @default(autoincrement())
   productName String   @db.VarChar(500)
-  price       Float
-  images      String[]
+  skuPrice       Float
+  image       String
   skuValue    String   @db.VarChar(500)
   skuId       Int?
   orderId     Int?
   createdAt   DateTime @default(now())
   order       Order?   @relation(fields: [orderId], references: [id], onUpdate: NoAction)
+  quantity    Int
+  productId   Int?
+  product     Product?  @relation(fields: [productId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  /// [ProductTranslations]
+  productTranslations Json
   sku         SKU?     @relation(fields: [skuId], references: [id], onUpdate: NoAction)
 }
 
@@ -393,6 +404,10 @@ model Order {
   updatedAt   DateTime             @updatedAt
   deletedById Int?
   products    Product[]
+  /// [Receiver]
+  receiver    Json
+  shopId      Int
+  shop        User?                @relation("Shop", fields: [shopId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   createdBy   User?                @relation("OrderCreatedBy", fields: [createdById], references: [id], onUpdate: NoAction)
   deletedBy   User?                @relation("OrderDeletedBy", fields: [deletedById], references: [id], onUpdate: NoAction)
   updatedBy   User?                @relation("OrderUpdatedBy", fields: [updatedById], references: [id], onUpdate: NoAction)
@@ -443,7 +458,7 @@ model Message {
 }
 
 enum OrderStatus {
-  PENDING_CONFIRMATION
+  PENDING_PAYMENT
   PENDING_PICKUP
   PENDING_DELIVERY
   DELIVERED

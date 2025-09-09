@@ -2,6 +2,7 @@ import { OrderBy, SortBy } from 'src/shared/constants/other.constant'
 import { BrandIncludeTranslationSchema } from 'src/shared/models/shared-brand.model'
 import { CategoryIncludeTranslationSchema } from 'src/shared/models/shared-category.model'
 import { ProductTranslationSchema } from 'src/shared/models/shared-product-translation.model'
+import { ProductSchema, VariantsType } from 'src/shared/models/shared-product.model'
 import { SKUSchema, UpsertSKUBodySchema } from 'src/shared/models/shared-sku.model'
 import z from 'zod'
 
@@ -25,57 +26,6 @@ function generateSKUs(variants: VariantsType) {
     image: ''
   }))
 }
-
-const VariantSchema = z.object({
-  value: z.string().trim(),
-  options: z.array(z.string().trim())
-})
-
-const VariantsSchema = z.array(VariantSchema).superRefine((variants, ctx) => {
-  for (let i = 0; i < variants.length; i++) {
-    const variant = variants[i]
-
-    const isExistingVariant = variants.findIndex((v) => v.value.toLowerCase() === variant.value.toLowerCase()) !== i
-
-    if (isExistingVariant) {
-      return ctx.addIssue({
-        code: 'custom',
-        message: `Value ${variant.value} is already exist in variants list.`,
-        path: ['variants']
-      })
-    }
-
-    const isDifferentOption = variant.options.some((option, index) => {
-      const isExistingOption = variant.options.findIndex((o) => o.toLowerCase() === option.toLowerCase()) !== index
-      return isExistingOption
-    })
-
-    if (isDifferentOption) {
-      return ctx.addIssue({
-        code: 'custom',
-        message: `Variant ${variant.value} has a same option name.`,
-        path: ['variants']
-      })
-    }
-  }
-})
-
-const ProductSchema = z.object({
-  id: z.number(),
-  publishedAt: z.coerce.date().nullable(),
-  name: z.string().trim().max(500),
-  basePrice: z.number().min(0),
-  virtualPrice: z.number().min(0),
-  brandId: z.number().positive(),
-  images: z.array(z.string()),
-  variants: VariantsSchema,
-  createdById: z.number().nullable(),
-  updatedById: z.number().nullable(),
-  deletedById: z.number().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  deletedAt: z.date().nullable()
-})
 
 // Danh cho client va guest
 const GetProductsQuerySchema = z.object({
@@ -177,12 +127,6 @@ const CreateProductBodySchema = ProductSchema.pick({
 
 const UpdateProductBodySchema = CreateProductBodySchema
 
-type VariantType = z.infer<typeof VariantSchema>
-
-type VariantsType = z.infer<typeof VariantsSchema>
-
-type ProductType = z.infer<typeof ProductSchema>
-
 type GetProductsQueryType = z.infer<typeof GetProductsQuerySchema>
 
 type GetManageProductsQueryType = z.infer<typeof GetManageProductsQuerySchema>
@@ -198,9 +142,6 @@ type CreateProductBodyType = z.infer<typeof CreateProductBodySchema>
 type UpdateProductBodyType = z.infer<typeof UpdateProductBodySchema>
 
 export {
-  VariantSchema,
-  VariantsSchema,
-  ProductSchema,
   GetProductsQuerySchema,
   GetManageProductsQuerySchema,
   GetProductsResSchema,
@@ -208,9 +149,6 @@ export {
   GetProductDetailResSchema,
   CreateProductBodySchema,
   UpdateProductBodySchema,
-  VariantType,
-  VariantsType,
-  ProductType,
   GetProductsQueryType,
   GetManageProductsQueryType,
   GetProductsResType,
